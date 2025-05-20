@@ -1,22 +1,25 @@
 # I use here patchright -- patched and undetected version of the Playwright Testing and Automation Framework.
 from patchright.sync_api import sync_playwright, Playwright
 import json, time
-from database import create_table_if_not_exists, insert_item_if_not_exists
+from database import create_table_if_not_exists, insert_item_if_not_exists, insert_item
 
 # Тут збираються дані про всі товари на сторінках і все працює стабільно
 def scrap_atb(playwright: Playwright, choice):
     urls = {
+        # Аналіз лише по цим 5
         "1": {"url": "https://www.atbmarket.com/catalog/287-ovochi-ta-frukti", "category": "Овочі та фрукти"},
-        "2": {"url": "https://www.atbmarket.com/catalog/285-bakaliya", "category": "Бакалія"},
-        "3": {"url": "https://www.atbmarket.com/catalog/molocni-produkti-ta-ajca", "category": "Молочні продукти та яйця"},
+        "2": {"url": "https://www.atbmarket.com/catalog/molocni-produkti-ta-ajca", "category": "Молочні продукти та яйця"},
+        "3": {"url": "https://www.atbmarket.com/catalog/325-khlibobulochni-virobi", "category": "Хлібобулочні вироби"},
         "4": {"url": "https://www.atbmarket.com/catalog/294-napoi-bezalkogol-ni", "category": "Напої безалкогольні"},
-        "5": {"url": "https://www.atbmarket.com/catalog/siri", "category": "Сири"},
-        "6": {"url": "https://www.atbmarket.com/catalog/maso", "category": "М'ясо"},
-        "7": {"url": "https://www.atbmarket.com/catalog/299-konditers-ki-virobi", "category": "Кондитерські вироби"},
-        "8": {"url": "https://www.atbmarket.com/catalog/353-riba-i-moreprodukti", "category": "Риба та морепродукти"},
-        "9": {"url": "https://www.atbmarket.com/catalog/325-khlibobulochni-virobi", "category": "Хлібобулочні вироби"},
-        "10": {"url": "https://www.atbmarket.com/catalog/322-zamorozheni-produkti", "category": "Заморожені продукти"},
-        "11": {"url": "https://www.atbmarket.com/catalog/kava-caj", "category": "Кава та чай"},
+        "5": {"url": "https://www.atbmarket.com/catalog/kava-caj", "category": "Кава та чай"},
+        
+        # Додаткові, нехай будуть
+        "6": {"url": "https://www.atbmarket.com/catalog/siri", "category": "Сири"},
+        "7": {"url": "https://www.atbmarket.com/catalog/maso", "category": "М'ясо"},
+        "8": {"url": "https://www.atbmarket.com/catalog/299-konditers-ki-virobi", "category": "Кондитерські вироби"},
+        "9": {"url": "https://www.atbmarket.com/catalog/353-riba-i-moreprodukti", "category": "Риба та морепродукти"},
+        "10": {"url": "https://www.atbmarket.com/catalog/285-bakaliya", "category": "Бакалія"},
+        "11": {"url": "https://www.atbmarket.com/catalog/322-zamorozheni-produkti", "category": "Заморожені продукти"},
         "12": {"url": "https://www.atbmarket.com/catalog/cipsi-sneki", "category": "Чіпси та снеки"},
         "13": {"url": "https://www.atbmarket.com/catalog/360-kovbasa-i-m-yasni-delikatesi", "category": "Ковбаси та м'ясні делікатеси"},
         "14": {"url": "https://www.atbmarket.com/catalog/339-dityache-kharchuvannya", "category": "Дитяче харчування"},
@@ -61,7 +64,7 @@ def scrap_atb(playwright: Playwright, choice):
                 # print("URL товару:", offers["url"])
                 # print("------")
                 
-                insert_item_if_not_exists(
+                insert_item(
                     json_data["name"],
                     float(offers["price"]),
                     offers["priceCurrency"],
@@ -72,22 +75,29 @@ def scrap_atb(playwright: Playwright, choice):
             p.close()
 
         # Переходимо на наступну сторінку
+        current_url = page.url
         next_button = page.locator('li.product-pagination__item.next a.product-pagination__link')
+
         if next_button.count() > 0:
             next_button.first.click()
             page.wait_for_load_state("networkidle")
+            if page.url == current_url:
+                print("Остання сторінка. Завершення.")
+                break
         else:
             print("Остання сторінка. Завершення.")
             break
         
 
 """На сайті Сільпо в мене проблема з динамічною загрузкою -- Той самий код в мене працює "через раз".
-Тому поки що, збираються дані не про всі товари на сторінці, але, думаю, того що є буде достатньо"""
+Тому поки що, збираються дані не про всі товари, але, думаю, того що є буде достатньо"""
 def scrap_silpo(playwright: Playwright, choice):
     urls = {
         "1": {"url": "https://silpo.ua/category/frukty-ovochi-4788", "category": "Овочі та фрукти"},
         "2": {"url": "https://silpo.ua/category/khlib-ta-vypichka-5121", "category": "Хлібобулочні вироби"},
-        "3": {"url": "https://silpo.ua/category/molochni-produkty-ta-iaitsia-234", "category": "Молочні продукти та яйця"}
+        "3": {"url": "https://silpo.ua/category/molochni-produkty-ta-iaitsia-234", "category": "Молочні продукти та яйця"},
+        "4": {"url": "https://silpo.ua/category/napoi-52", "category": "Напої безалкогольні"},
+        "5": {"url": "https://silpo.ua/category/kava-chai-359", "category": "Кава та чай"}
     }
 
     start_url = urls.get(choice)
@@ -140,7 +150,7 @@ def scrap_silpo(playwright: Playwright, choice):
                 # print("URL товару:", offers["url"])
                 # print("------")
                 
-                insert_item_if_not_exists(
+                insert_item(
                     json_data["name"],
                     float(offers["price"]),
                     offers["priceCurrency"],
@@ -160,5 +170,5 @@ if __name__ == "__main__":
     print("Make a choice: ")
     choice = input()
     with sync_playwright() as playwright:
-        scrap_atb(playwright, choice)
-        # scrap_silpo(playwright, choice)
+        # scrap_atb(playwright, choice)
+        scrap_silpo(playwright, choice)

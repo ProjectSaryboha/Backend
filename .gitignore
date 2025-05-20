@@ -1,3 +1,7 @@
-scrapper/.env
+.env
 __pycache__
 venv
+analyzer/__pycache__
+analyzer/interface.py
+predictions_LSTM
+predictions_Prophet
