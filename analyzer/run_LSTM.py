@@ -59,7 +59,3 @@ def batch_predict_all_categories(base_dir="predictions_LSTM", networks=["atb", "
 
             for res in results:
                 print("  ", res)
-
-if __name__ == "__main__":
-    batch_predict_all_categories()
-    import_json()
