@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  web:
+    container_name: product-analyze-web
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    command: python -u app.py
+
+  db:
+    container_name: product-analyze-db
+    image: postgres:latest
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=Groceries
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1234
+    ports:
+      - "5434:5434"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

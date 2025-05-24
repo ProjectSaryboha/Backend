@@ -1,6 +1,13 @@
+import os
+
 import pandas as pd
 
-def get_products_by_price(category, input_file="predicted_products.json"):
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+DEFAULT_JSON = os.path.join(BASE_DIR, "predicted_products.json")
+
+def get_products_by_price(category, input_file=DEFAULT_JSON):
     try:
         df = pd.read_json(input_file, encoding="utf-8")
     except Exception as e:
@@ -30,7 +37,7 @@ def get_products_by_price(category, input_file="predicted_products.json"):
 
     return sorted_products.to_dict(orient='records')
 
-def get_top_5_expensive_products(input_file="predicted_products.json"):
+def get_top_5_expensive_products(input_file=DEFAULT_JSON):
     try:
         df = pd.read_json(input_file, encoding="utf-8")
     except Exception as e:
@@ -55,7 +62,7 @@ def get_top_5_expensive_products(input_file="predicted_products.json"):
     result = top_5.to_dict(orient='records')
     return result
 
-def get_categories_sorted_by_average_price(input_file="predicted_products.json"):
+def get_categories_sorted_by_average_price(input_file=DEFAULT_JSON):
     try:
         df = pd.read_json(input_file, encoding="utf-8")
     except Exception as e:
@@ -77,7 +84,7 @@ def get_categories_sorted_by_average_price(input_file="predicted_products.json")
     result = grouped.to_dict(orient='records')
     return result
 
-def get_product_counts_by_category(input_file="predicted_products.json"):
+def get_product_counts_by_category(input_file=DEFAULT_JSON):
     try:
         df = pd.read_json(input_file, encoding="utf-8")
     except Exception as e:
