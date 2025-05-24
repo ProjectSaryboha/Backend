@@ -3,5 +3,6 @@ __pycache__
 venv
 analyzer/__pycache__
 analyzer/interface.py
+analyzer/predicted_products.json
 predictions_LSTM
 predictions_Prophet

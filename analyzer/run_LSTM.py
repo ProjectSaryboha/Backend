@@ -1,6 +1,8 @@
 import os
 from multiprocessing import Pool, cpu_count
 from functools import partial
+
+from analyzer.utils import import_json
 from db_to_pnd import create_dataframe, get_connection_string
 from analyzer_LSTM import extract_product_name, run_full_prediction
 
@@ -60,3 +62,4 @@ def batch_predict_all_categories(base_dir="predictions_LSTM", networks=["atb", "
 
 if __name__ == "__main__":
     batch_predict_all_categories()
+    import_json()

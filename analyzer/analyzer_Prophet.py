@@ -1,5 +1,4 @@
 import json
-import pandas as pd
 from prophet import Prophet
 
 def prepare_prophet_data(df, product_name):
