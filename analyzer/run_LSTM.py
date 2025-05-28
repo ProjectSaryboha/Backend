@@ -1,29 +1,30 @@
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import json
 from multiprocessing import Pool, cpu_count
 from functools import partial
 
 from analyzer.db_to_pnd import create_dataframe, get_connection_string
 from analyzer.analyzer_LSTM import extract_product_name, run_full_prediction
 
-def predict_for_product(product_name, df, category_name, category_dir, look_back, epochs, batch_size):
+def predict_for_product(product_name, df, category_name, market_name, look_back, epochs, batch_size):
     try:
-        json_path = os.path.join(category_dir, f"{product_name.replace(' ', '_')}_LSTM_schema.json")
-        
-        # Якщо результат вже існує — пропускаємо
-        if os.path.exists(json_path):
-            return f"✓ Пропущено (вже існує): {product_name}"
-
-        predicted_price = run_full_prediction(
-            df, product_name, category_name,
+        return run_full_prediction(
+            df, product_name, category_name, market_name,
             look_back=look_back, epochs=epochs, batch_size=batch_size,
-            json_path=json_path
+            json_path=None
         )
-        return f"✓ {product_name}: {predicted_price:.2f} грн"
     except Exception as e:
-        return f"✗ {product_name}: {e}"
+        print(f"✗ {product_name}: {e}")
+        return None
 
-def batch_predict_all_categories(base_dir="predictions_LSTM", networks=["atb", "silpo"],
-                                  categories=None, look_back=2, epochs=20, batch_size=16):
+def batch_predict_all_categories(output_file="Predictions/predicted_products_LSTM.json",
+                              networks=["atb", "silpo"],
+                              categories=None, look_back=2, epochs=20, batch_size=16):
+
+    # Створити папку Predictions
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
     if categories is None:
         categories = [
             "Овочі та фрукти",
@@ -34,6 +35,7 @@ def batch_predict_all_categories(base_dir="predictions_LSTM", networks=["atb", "
         ]
 
     connection_string = get_connection_string()
+    all_predictions = []
 
     for network in networks:
         print(f"\nМережа: {network}")
@@ -43,18 +45,24 @@ def batch_predict_all_categories(base_dir="predictions_LSTM", networks=["atb", "
             df['name'] = df['name'].apply(extract_product_name)
             products = sorted(df['name'].unique())
 
-            # Категорія → мережа → продукт
-            category_dir = os.path.join(base_dir, network, category_name.replace(' ', '_'))
-            os.makedirs(category_dir, exist_ok=True)
-
-            # Паралельна обробка
-            pool = Pool(processes=cpu_count())  # або менше — напр. processes=4
-            func = partial(predict_for_product, df=df, category_name=category_name,
-                           category_dir=category_dir, look_back=look_back,
-                           epochs=epochs, batch_size=batch_size)
+            pool = Pool(processes=cpu_count())
+            func = partial(predict_for_product, df=df, category_name=category_name, market_name=network, 
+                           look_back=look_back, epochs=epochs, batch_size=batch_size)
             results = pool.map(func, products)
             pool.close()
             pool.join()
 
             for res in results:
-                print("  ", res)
+                if res:
+                    all_predictions.append(res)
+                    print(f"  ✓ {res['name']}: {res['predicted_price']:.2f} грн")
+                else:
+                    print("  ✗ Помилка")
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(all_predictions, f, ensure_ascii=False, indent=2)
+
+    print(f"\n✅ Збережено {len(all_predictions)} продуктів у '{output_file}'")
+
+if __name__ == "__main__":
+    batch_predict_all_categories()

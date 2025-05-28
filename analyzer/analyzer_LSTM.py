@@ -1,3 +1,5 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import json
 import numpy as np
 import pandas as pd
@@ -52,7 +54,7 @@ def predict_next_day_price(model, scaler, scaled_prices, look_back=2):
     predicted_price = scaler.inverse_transform(predicted_scaled)
     return predicted_price[0][0]
 
-def run_full_prediction(df, product_name, category, look_back=2, epochs=50, batch_size=16, json_path=None):
+def run_full_prediction(df, product_name, category, market, look_back=2, epochs=50, batch_size=16, json_path=None):
     X, y, scaler, scaled_prices, price_history_series = prepare_product_data(df, product_name, look_back)
     if len(X) == 0:
         raise ValueError("Недостатньо даних для передбачення")
@@ -68,12 +70,13 @@ def run_full_prediction(df, product_name, category, look_back=2, epochs=50, batc
     result = {
         "name": product_name,
         "category": category,
+        "market": market,
         "price_history": price_history,
-        "price_prediction": float(predicted_price)
+        "predicted_price": float(predicted_price)
     }
 
     if json_path:
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=4)
 
-    return predicted_price
+    return result

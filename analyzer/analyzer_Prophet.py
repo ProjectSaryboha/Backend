@@ -18,7 +18,7 @@ def forecast_with_prophet(prophet_df, periods=7):
     forecast = model.predict(future)
     return forecast
 
-def run_full_forecast(df, product_name, category, periods=7, json_path=None):
+def run_full_forecast(df, product_name, market, category, periods=7, json_path=None):
     prophet_df, daily_prices = prepare_prophet_data(df, product_name)
     if prophet_df.shape[0] < 5:
         raise ValueError("Недостатньо даних для передбачення")
@@ -43,6 +43,7 @@ def run_full_forecast(df, product_name, category, periods=7, json_path=None):
     result = {
         "name": product_name,
         "category": category,
+        "market": market,
         "price_history": price_history,
         "price_prediction": predictions
     }
@@ -51,4 +52,4 @@ def run_full_forecast(df, product_name, category, periods=7, json_path=None):
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=4)
 
-    return predictions
+    return result

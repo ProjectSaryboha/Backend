@@ -1,36 +1,36 @@
 from flask import jsonify, Flask, request
-
 from analyzer.analyze import get_top_5_expensive_products, get_categories_sorted_by_average_price, \
     get_product_counts_by_category, get_products_by_price
-from analyzer.run_LSTM import batch_predict_all_categories
-from analyzer.utils import import_json
 
 app = Flask(__name__)
-@app.route('/predict', methods=['POST'])
-def predict():
-    batch_predict_all_categories()
-    import_json()
-    return jsonify({"message": "Прогнозування завершено успішно."}), 200
 
 @app.route("/top-products", methods=["GET"])
 def top_products():
-    return jsonify(get_top_5_expensive_products())
+    market = request.args.get("market")
+    model = request.args.get("model")
+    return jsonify(get_top_5_expensive_products(market, model))
 
 @app.route("/category-prices", methods=["GET"])
 def category_prices():
-    return jsonify(get_categories_sorted_by_average_price())
+    market = request.args.get("market")
+    model = request.args.get("model")
+    return jsonify(get_categories_sorted_by_average_price(market, model))
 
 @app.route("/product-counts", methods=["GET"])
 def product_counts():
-    return jsonify(get_product_counts_by_category())
+    market = request.args.get("market")
+    model = request.args.get("model")
+    return jsonify(get_product_counts_by_category(market, model))
 
 @app.route("/products-by-category", methods=["GET"])
 def products_by_category():
     category = request.args.get("category")
-    if not category:
-        return jsonify({"error": "Параметр 'category' є обов'язковим"}), 400
+    market = request.args.get("market")
+    model = request.args.get("model")
+    if not (category):
+        return jsonify({"error": "Параметр category є обов'язковим"}), 400
 
-    products = get_products_by_price(category)
+    products = get_products_by_price(category, market, model)
     return jsonify(products)
 
 if __name__ == "__main__":

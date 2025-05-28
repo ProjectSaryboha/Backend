@@ -1,23 +1,26 @@
 import os
+import json
 from multiprocessing import Pool, cpu_count
 from functools import partial
+
 from db_to_pnd import create_dataframe, get_connection_string
 from analyzer_LSTM import extract_product_name
 from analyzer_Prophet import run_full_forecast
 
-def forecast_for_product(product_name, df, category_name, category_dir, periods):
+def forecast_for_product(product_name, df, category_name, market_name, periods):
     try:
-        json_path = os.path.join(category_dir, f"{product_name.replace(' ', '_')}_Prophet_schema.json")
-        if os.path.exists(json_path):
-            return f"✓ Пропущено (вже існує): {product_name}"
-
-        predictions = run_full_forecast(df, product_name, category_name, periods=periods, json_path=json_path)
-        return f"✓ {product_name}: {predictions[-1]['yhat']:.2f} грн (на {predictions[-1]['date']})"
+        return run_full_forecast(df, product_name, market_name, category_name, periods=periods, json_path=None)
     except Exception as e:
-        return f"✗ {product_name}: {e}"
+        print(f"✗ {product_name}: {e}")
+        return None
 
-def batch_forecast_all_categories(base_dir="predictions", networks=["atb", "silpo"],
+def batch_forecast_to_single_file(output_file="Predictions/predicted_products_Prophet.json",
+                                  networks=["atb", "silpo"],
                                   categories=None, periods=7):
+
+    # Створення папки Predictions
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
     if categories is None:
         categories = [
             "Овочі та фрукти",
@@ -28,6 +31,7 @@ def batch_forecast_all_categories(base_dir="predictions", networks=["atb", "silp
         ]
 
     connection_string = get_connection_string()
+    all_forecasts = []
 
     for network in networks:
         print(f"\nМережа: {network}")
@@ -37,18 +41,23 @@ def batch_forecast_all_categories(base_dir="predictions", networks=["atb", "silp
             df['name'] = df['name'].apply(extract_product_name)
             products = sorted(df['name'].unique())
 
-            category_dir = os.path.join(base_dir, network, category_name.replace(' ', '_'))
-            os.makedirs(category_dir, exist_ok=True)
-
             pool = Pool(processes=cpu_count())
-            func = partial(forecast_for_product, df=df, category_name=category_name,
-                           category_dir=category_dir, periods=periods)
+            func = partial(forecast_for_product, df=df, category_name=category_name, market_name=network, periods=periods)
             results = pool.map(func, products)
             pool.close()
             pool.join()
 
             for res in results:
-                print("  ", res)
+                if res:
+                    all_forecasts.append(res)
+                    print(f"  ✓ {res['name']}: {res['price_prediction'][-1]['yhat']:.2f} грн на {res['price_prediction'][-1]['date']}")
+                else:
+                    print("  ✗ Помилка")
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(all_forecasts, f, ensure_ascii=False, indent=2)
+
+    print(f"\n✅ Збережено {len(all_forecasts)} продуктів у '{output_file}'")
 
 if __name__ == "__main__":
-    batch_forecast_all_categories(base_dir="predictions_Prophet")
+    batch_forecast_to_single_file()
