@@ -20,8 +20,7 @@ def load_dataframe(input_file, model):
     except Exception as e:
         print(f"Помилка при читанні файлу: {e}")
         return pd.DataFrame()
-    
-    # Prophet для деяких товарів може видавати негативне значення це через проблемки з моделлю
+
     if model == "prophet":
         records = []
         for item in raw_data:
@@ -31,12 +30,14 @@ def load_dataframe(input_file, model):
             if prediction_list and isinstance(prediction_list, list):
                 last_forecast = prediction_list[-1]
                 predicted_price = last_forecast.get("yhat")
+
                 if predicted_price is not None:
                     records.append({
                         "name": item.get("name"),
                         "category": item.get("category"),
                         "market": item.get("market"),
-                        "predicted_price": predicted_price
+                        "predicted_price": predicted_price,
+                        "price_history": item.get("price_history", [])
                     })
         return pd.DataFrame(records)
 
@@ -87,11 +88,13 @@ def get_top_5_expensive_products(market=None, model=None):
 
     top_5 = df.sort_values(by='predicted_price', ascending=False).head(5)
 
-    if 'name' not in top_5.columns:
-        print("У даних немає колонки 'name'")
-        return []
+    required_columns = ['name', 'predicted_price', 'price_history']
+    for col in required_columns:
+        if col not in top_5.columns:
+            print(f"У даних немає колонки '{col}'")
+            return []
 
-    return top_5[['name', 'predicted_price']].to_dict(orient='records')
+    return top_5[required_columns].to_dict(orient='records')
 
 def get_categories_sorted_by_average_price(market=None, model=None):
     input_file = get_input_file_by_model(model)
@@ -111,10 +114,21 @@ def get_categories_sorted_by_average_price(market=None, model=None):
         print(f"Немає даних для мережі '{market}'")
         return []
 
-    grouped = df.groupby('category')['predicted_price'].mean().reset_index()
-    grouped = grouped.sort_values(by='predicted_price', ascending=False)
+    avg_prices = df.groupby('category')['predicted_price'].mean().reset_index()
+    avg_prices = avg_prices.sort_values(by='predicted_price', ascending=False)
 
-    return grouped.to_dict(orient='records')
+    result = []
+    for _, row in avg_prices.iterrows():
+        category = row['category']
+        price = row['predicted_price']
+        sample = df[df['category'] == category].iloc[0]
+        result.append({
+            'category': category,
+            'predicted_price': price,
+            'price_history': sample.get('price_history', [])
+        })
+
+    return result
 
 def get_product_counts_by_category(market=None, model=None):
     input_file = get_input_file_by_model(model)
