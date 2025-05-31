@@ -1,8 +1,10 @@
 from flask import jsonify, Flask, request
+from flask_cors import CORS
 from analyzer.analyze import get_top_5_expensive_products, get_categories_sorted_by_average_price, \
     get_product_counts_by_category, get_products_by_price
 
 app = Flask(__name__)
+CORS(app)
 
 @app.route("/top-products", methods=["GET"])
 def top_products():
